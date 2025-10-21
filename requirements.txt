@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-json-logger
+requests
+Mistralai
+scikit-learn
+praw
+python-dotenv

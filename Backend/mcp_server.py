@@ -10,6 +10,12 @@ import numpy as np
 from typing import Any, Dict, List, Optional
 from rapidfuzz import process, fuzz
 from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from fastapi.concurrency import run_in_threadpool
+
+# --- New Imports ---
+from .llm_agent import generate_recommendation
+# --- End New Imports ---
 
 # load .env if present
 try:
@@ -272,29 +278,56 @@ MCP_TOOLS = {
     "web_scraper": reddit_scraper,  # PRAW-only reddit tool
 }
 
+# --- NEW: Pydantic models for request validation ---
+class McpToolRequest(BaseModel):
+    tool_name: str
+    kwargs: Dict[str, Any] = {}
+
+class RecommendationRequest(BaseModel):
+    phone_name: str
+    top_k: int = 3
+    min_score: int = 60
+# --- END Pydantic models ---
+
+
 @app.post("/mcp_tool")
-async def mcp_tool(req: Request):
-    try:
-        body = await req.json()
-    except Exception:
-        return safe_json_error("Invalid JSON body")
-    if not isinstance(body, dict):
-        return safe_json_error("Request JSON must be an object")
-    tool_name = body.get("tool_name")
-    if not tool_name or not isinstance(tool_name, str):
-        return safe_json_error("tool_name (string) is required")
-    if "kwargs" in body and isinstance(body.get("kwargs"), dict):
-        kwargs = body["kwargs"].copy()
-    else:
-        kwargs = body.copy()
-        kwargs.pop("tool_name", None)
-    tool = MCP_TOOLS.get(tool_name)
+async def mcp_tool(payload: McpToolRequest): # Use Pydantic model
+    """
+    Run a specified MCP tool in a non-blocking thread pool.
+    """
+    tool = MCP_TOOLS.get(payload.tool_name)
     if tool is None:
-        return safe_json_error(f"Tool '{tool_name}' not found")
+        return safe_json_error(f"Tool '{payload.tool_name}' not found")
+
     try:
-        result = tool(**kwargs)
+        # KEY CHANGE: Run the synchronous tool in a thread pool
+        result = await run_in_threadpool(tool, **payload.kwargs)
         return result
     except TypeError as e:
+        # This catches errors from kwargs not matching the tool signature
         return safe_json_error(f"Tool argument error: {e}")
     except Exception as e:
+        # This catches errors from within the tool itself
         return safe_json_error(f"Internal tool error: {e}")
+
+
+# --- NEW: Endpoint for Streamlit App ---
+@app.post("/recommend")
+async def recommend(payload: RecommendationRequest):
+    """
+    New endpoint to run the full recommendation pipeline.
+    This is what Streamlit will call.
+    """
+    try:
+        # Run the *entire* agent logic in the thread pool
+        # because generate_recommendation itself makes blocking
+        # calls (to mcp_client, which uses requests)
+        recommendation = await run_in_threadpool(
+            generate_recommendation,
+            phone_name=payload.phone_name,
+            top_k=payload.top_k,
+            min_score=payload.min_score
+        )
+        return {"recommendation": recommendation}
+    except Exception as e:
+        return safe_json_error(f"Recommendation pipeline failed: {e}")

@@ -3,7 +3,7 @@
 import os
 import json
 from typing import List, Dict, Any
-from mcp_client import call_mcp_tool
+from .mcp_client import call_mcp_tool
 from dotenv import load_dotenv
 # Mistral SDK
 try:

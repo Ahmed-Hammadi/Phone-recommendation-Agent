@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+venv.bak/
+venv-*/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and runtime
+*.log
+logs/
+pip-log.txt
+*.pid
+*.sock
+
+# Test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Data / caches / downloads
+.cache/
+cache/
+Backend/cache/
+Backend/*.cache
+*.sqlite3
+*.db
+*.db-journal
+
+# Sensitive files / credentials
+.env
+Backend/.env
+.env.local
+.env.*.local
+credentials.json
+secrets.yml
+
+# Dataset / large files (if you don't want to track them)
+Backend/database/
+database/
+*.csv
+*.zip
+
+# Build / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Node (if you ever add a web UI)
+node_modules/
+
+# Streamlit
+.streamlit/
+
+# Misc
+coverage.xml
+*.pem
+*.key

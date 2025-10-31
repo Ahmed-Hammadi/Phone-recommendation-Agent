@@ -104,7 +104,7 @@ LLM Recommendation:
 Component	Technology
 Frontend	Streamlit
 Backend	FastAPI
-Reasoning	OpenAI GPT / Local LLM
+Reasoning	Misral / Local LLM
 Tools	MCP (Multi-Component Protocol)
 Data Sources	Reddit API, Device Specs DB
 Language	Python 3.10+
@@ -122,9 +122,8 @@ Language	Python 3.10+
 
 Ahmed Hammadi
 Agentic AI Developer & MLOps Engineer
-📧 [your-email@example.com
-]
-🌐 [your-portfolio-link.com]
+📧 [Ahmed.hammadi@enetcom.u-sfax.tn]
+
 
 🪪 License
 

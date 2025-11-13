@@ -9,15 +9,17 @@ from dotenv import load_dotenv
 try:
     from mistralai import Mistral
     MISTRAL_SDK_AVAILABLE = True
-except Exception:
+    print("✅ Mistral SDK loaded successfully in llm_agent.py")
+except Exception as e:
     MISTRAL_SDK_AVAILABLE = False
+    print(f"⚠️  Mistral SDK import failed in llm_agent.py: {e}")
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
+print(f"🔑 MISTRAL_API_KEY present: {'Yes' if MISTRAL_API_KEY else 'No'} (length: {len(MISTRAL_API_KEY)})")
+print(f"🤖 MISTRAL_SDK_AVAILABLE: {MISTRAL_SDK_AVAILABLE}")
 
 def _parse_mistral_response(res: Any) -> str:
-    """
-    Robust parser for possible mistral SDK responses.
-    """
+
     try:
         # dict-like response with 'choices'
         if isinstance(res, dict):
@@ -142,7 +144,7 @@ def _heuristic_summary_from_specs_and_reviews(specs: Dict[str, Any], reviews: Li
         out.append("- No clear cons extracted heuristically.")
     return "\n".join(out)
 
-def generate_recommendation(phone_name: str, top_k: int = 3, min_score: int = 60) -> str:
+def generate_recommendation(phone_name: str, top_k: int = 3, min_score: int = 60, structured: bool = False):
     """
     Get specs via MCP, fetch Reddit reviews, then produce a structured recommendation via Mistral LLM.
     Uses the Mistral SDK correctly (chat.complete).
@@ -173,6 +175,25 @@ def generate_recommendation(phone_name: str, top_k: int = 3, min_score: int = 60
     elif isinstance(reviews_resp, dict) and "error" in reviews_resp:
         # keep the error message but continue with empty comments
         reddit_comments = []
+    
+    # Log Reddit scraping results
+    print(f"\n{'='*80}")
+    print(f"📱 REDDIT SCRAPING RESULTS FOR: {model_search_name}")
+    print(f"{'='*80}")
+    print(f"Total comments fetched: {len(reddit_comments)}")
+    print(f"Comments sent to LLM: {min(len(reddit_comments), 10)}")
+    if reddit_comments:
+        print(f"\n📝 Sample comments (first {min(len(reddit_comments), 10)}):")
+        for idx, comment in enumerate(reddit_comments[:10], start=1):
+            # Truncate long comments for logging
+            preview = comment[:150] + "..." if len(comment) > 150 else comment
+            print(f"\n  [{idx}] {preview}")
+    else:
+        print("⚠️  No Reddit comments found!")
+        if isinstance(reviews_resp, dict):
+            diag = reviews_resp.get("diag", {})
+            print(f"   Diagnostic info: {diag}")
+    print(f"{'='*80}\n")
 
     # Build prompt
     other_matches_text = ""
@@ -201,18 +222,71 @@ Provide output as plain text with these sections:
 """
 
     # If Mistral key not set or SDK not available -> return fallback heuristic summary
+    # If Mistral key is not set or SDK isn't available -> use fallback heuristic
     if not MISTRAL_API_KEY or not MISTRAL_SDK_AVAILABLE:
-        return _heuristic_summary_from_specs_and_reviews(specs, reddit_comments)
+        fallback_text = _heuristic_summary_from_specs_and_reviews(specs, reddit_comments)
+        if structured:
+            return {
+                "used_llm": False,
+                "llm_error": None,
+                "recommendation": fallback_text,
+                "top_match": {
+                    "search_name": model_search_name,
+                    "score": top.get("score"),
+                    "specs": specs,
+                },
+                "other_matches": [
+                    {"search_name": m.get("search_name"), "score": m.get("score"), "specs": m.get("specs")} for m in matches[1:]
+                ],
+                "reddit_comments": reddit_comments[:10],
+            }
+        return fallback_text
 
     # Call Mistral properly
     try:
-        with Mistral(api_key=MISTRAL_API_KEY) as mistral:
-            res = mistral.chat.complete(
-                model=os.getenv("MISTRAL_MODEL", "mistral-small-latest"),
-                messages=[{"content": prompt, "role": "user"}],
-                stream=False
-            )
-        return _parse_mistral_response(res)
+        try:
+            with Mistral(api_key=MISTRAL_API_KEY) as mistral:
+                res = mistral.chat.complete(
+                    model=os.getenv("MISTRAL_MODEL", "mistral-small-latest"),
+                    messages=[{"content": prompt, "role": "user"}],
+                    stream=False
+                )
+            parsed = _parse_mistral_response(res)
+            if structured:
+                return {
+                    "used_llm": True,
+                    "llm_error": None,
+                    "recommendation": parsed,
+                    "top_match": {
+                        "search_name": model_search_name,
+                        "score": top.get("score"),
+                        "specs": specs,
+                    },
+                    "other_matches": [
+                        {"search_name": m.get("search_name"), "score": m.get("score"), "specs": m.get("specs" )} for m in matches[1:]
+                    ],
+                    "reddit_comments": reddit_comments[:10],
+                }
+            return parsed
+        except Exception as e:
+            # return fallback heuristic if LLM fails, and include error for debugging
+            fallback = _heuristic_summary_from_specs_and_reviews(specs, reddit_comments)
+            if structured:
+                return {
+                    "used_llm": False,
+                    "llm_error": str(e),
+                    "recommendation": fallback,
+                    "top_match": {
+                        "search_name": model_search_name,
+                        "score": top.get("score"),
+                        "specs": specs,
+                    },
+                    "other_matches": [
+                        {"search_name": m.get("search_name"), "score": m.get("score"), "specs": m.get("specs")} for m in matches[1:]
+                    ],
+                    "reddit_comments": reddit_comments[:10],
+                }
+            return f"LLM call failed: {e}\n\nFallback summary:\n{fallback}"
     except Exception as e:
         # return fallback heuristic if LLM fails, and include error for debugging
         fallback = _heuristic_summary_from_specs_and_reviews(specs, reddit_comments)

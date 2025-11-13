@@ -1,8 +1,13 @@
 fastapi
 uvicorn
-python-json-logger
 requests
-Mistralai
-scikit-learn
+mistralai
+pandas
+numpy
+rapidfuzz
 praw
 python-dotenv
+cloudscraper
+beautifulsoup4
+psycopg2-binary
+sqlalchemy

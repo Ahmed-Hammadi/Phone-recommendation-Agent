@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.25), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(14, 116, 144, 0.18), transparent 55%),
+    #050714;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url("/textures/noise.png");
+  opacity: 0.08;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+* {
+  box-sizing: border-box;
+}

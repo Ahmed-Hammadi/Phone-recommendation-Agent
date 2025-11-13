@@ -71,6 +71,10 @@ build/
 
 # Node (if you ever add a web UI)
 node_modules/
+npm-debug.log*
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
 
 # Streamlit
 .streamlit/

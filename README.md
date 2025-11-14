@@ -1,6 +1,6 @@
 ## Phone Recommendation Agent
 
-An AI co-pilot that narrows phone choices in seconds. The backend runs a Model Context Protocol (MCP) toolchain orchestrated by a GPT-5-Codex planner, while the new glassmorphism React interface delivers a premium experience with session memory, reasoning transparency, and live Tunisian pricing.
+An AI co-pilot that narrows phone choices in seconds. The backend runs a Model Context Protocol (MCP) toolchain orchestrated by a planner, while the new glassmorphism React interface delivers a premium experience with session memory, reasoning transparency, and live Tunisian pricing.
 
 ---
 
